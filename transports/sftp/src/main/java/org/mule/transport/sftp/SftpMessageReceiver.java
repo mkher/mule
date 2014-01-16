@@ -193,6 +193,22 @@ public class SftpMessageReceiver extends AbstractPollingMessageReceiver
         return super.handleUnacceptedFilter(message);
     }
 
+    public SftpReceiverRequesterUtil getSftpRRUtil() {
+        return sftpRRUtil;
+    }
+
+    public void setSftpRRUtil(SftpReceiverRequesterUtil sftpRRUtil) {
+        this.sftpRRUtil = sftpRRUtil;
+    }
+
+    public LockFactory getLockFactory() {
+        return lockFactory;
+    }
+
+    public void setLockFactory(LockFactory lockFactory) {
+        this.lockFactory = lockFactory;
+    }
+
     public void doConnect() throws Exception
     {
         // no op

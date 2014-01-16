@@ -25,9 +25,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-/**
-*
-*/
 public class DefaultThreadPoolFactory extends ThreadPoolFactory
 {
     // deliberately shadow the superclass' static logger as to avoid log congestion on it
@@ -89,7 +86,7 @@ public class DefaultThreadPoolFactory extends ThreadPoolFactory
     public ScheduledThreadPoolExecutor createScheduledPool(String name, ThreadingProfile tp)
     {
         ScheduledThreadPoolExecutor pool = internalCreateScheduledPool(tp);
-        configureThreadFactory(name, tp, pool);
+        configureThreadPoolExecutor(name, tp, pool);
         return pool;
     }
 

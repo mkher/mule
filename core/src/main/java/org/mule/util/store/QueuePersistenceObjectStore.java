@@ -301,17 +301,20 @@ public class QueuePersistenceObjectStore<T extends Serializable> extends Abstrac
 
     protected void deleteStoreFile(File file) throws ObjectStoreException
     {
+        logger.info("Deleting: " + file.getName() + " file from queue");
         if (file.exists())
         {
             if (!file.delete())
             {
                 Message message =
                     CoreMessages.createStaticMessage("Deleting " + file.getAbsolutePath() + " failed");
+                logger.warn("Deleting: " + file.getAbsolutePath() + " failed.");
                 throw new ObjectStoreException(message);
             }
         }
         else
         {
+            logger.warn("File does not exist in quueue: " + file.getName());
             throw new ObjectDoesNotExistException();
         }
     }
