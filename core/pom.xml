@@ -10,6 +10,7 @@
     </parent>
     <artifactId>mule-core</artifactId>
     <packaging>jar</packaging>
+    <version>3.5.0-M1-SNAPSHOT</version>
     <name>Mule Core</name>
     <description>Mule server and core classes</description>
 
