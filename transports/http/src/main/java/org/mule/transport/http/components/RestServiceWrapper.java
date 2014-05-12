@@ -22,6 +22,7 @@ import org.mule.api.expression.ExpressionEvaluator;
 import org.mule.api.expression.RequiredValueException;
 import org.mule.api.lifecycle.InitialisationException;
 import org.mule.api.routing.filter.Filter;
+import org.mule.api.transport.PropertyScope;
 import org.mule.component.AbstractComponent;
 import org.mule.config.i18n.CoreMessages;
 import org.mule.endpoint.EndpointURIEndpointBuilder;
@@ -29,6 +30,7 @@ import org.mule.routing.filters.ExpressionFilter;
 import org.mule.transport.NullPayload;
 import org.mule.transport.http.HttpConnector;
 import org.mule.transport.http.HttpConstants;
+import org.mule.transport.http.HttpsConnector;
 import org.mule.util.StringUtils;
 
 import java.net.MalformedURLException;
@@ -46,8 +48,7 @@ import org.apache.commons.logging.LogFactory;
  * can be configured with a service URL plus a number of properties that allow you to
  * configure the parameters and error conditions on the service.
  */
-public class RestServiceWrapper extends AbstractComponent
-{
+public class RestServiceWrapper extends AbstractComponent {
     public static final String DELETE = HttpConstants.METHOD_DELETE;
     public static final String GET = HttpConstants.METHOD_GET;
     public static final String CONTENT_TYPE_VALUE = "application/x-www-form-urlencoded";
@@ -59,24 +60,23 @@ public class RestServiceWrapper extends AbstractComponent
     protected transient Log logger = LogFactory.getLog(getClass());
 
     private String serviceUrl;
+    private HttpsConnector connector;
+
     private Map requiredParams = new HashMap();
     private Map optionalParams = new HashMap();
     private String httpMethod = GET;
     private List payloadParameterNames;
     private Filter errorFilter;
 
-    public String getServiceUrl()
-    {
+    public String getServiceUrl() {
         return serviceUrl;
     }
 
-    public void setServiceUrl(String serviceUrl)
-    {
+    public void setServiceUrl(String serviceUrl) {
         this.serviceUrl = serviceUrl;
     }
 
-    public Map getRequiredParams()
-    {
+    public Map getRequiredParams() {
         return requiredParams;
     }
 
@@ -88,8 +88,7 @@ public class RestServiceWrapper extends AbstractComponent
      *
      * @param requiredParams
      */
-    public void setRequiredParams(Map requiredParams)
-    {
+    public void setRequiredParams(Map requiredParams) {
         this.requiredParams = requiredParams;
     }
 
@@ -98,67 +97,51 @@ public class RestServiceWrapper extends AbstractComponent
      * execution will continue. Note that you can use {@link ExpressionEvaluator}
      * expressions such as xpath, header, xquery, etc
      */
-    public Map getOptionalParams()
-    {
+    public Map getOptionalParams() {
         return optionalParams;
     }
 
-    public void setOptionalParams(Map optionalParams)
-    {
+    public void setOptionalParams(Map optionalParams) {
         this.optionalParams = optionalParams;
     }
 
-    public String getHttpMethod()
-    {
+    public String getHttpMethod() {
         return httpMethod;
     }
 
-    public void setHttpMethod(String httpMethod)
-    {
+    public void setHttpMethod(String httpMethod) {
         this.httpMethod = httpMethod;
     }
 
-    public List getPayloadParameterNames()
-    {
+    public List getPayloadParameterNames() {
         return payloadParameterNames;
     }
 
-    public void setPayloadParameterNames(List payloadParameterNames)
-    {
+    public void setPayloadParameterNames(List payloadParameterNames) {
         this.payloadParameterNames = payloadParameterNames;
     }
 
-    public Filter getFilter()
-    {
+    public Filter getFilter() {
         return errorFilter;
     }
 
-    public void setFilter(Filter errorFilter)
-    {
+    public void setFilter(Filter errorFilter) {
         this.errorFilter = errorFilter;
     }
 
     @Override
-    protected void doInitialise() throws InitialisationException
-    {
-        if (serviceUrl == null)
-        {
+    protected void doInitialise() throws InitialisationException {
+        if (serviceUrl == null) {
             throw new InitialisationException(CoreMessages.objectIsNull("serviceUrl"), this);
-        }
-        else if (!muleContext.getExpressionManager().isExpression(serviceUrl))
-        {
-            try
-            {
+        } else if (!muleContext.getExpressionManager().isExpression(serviceUrl)) {
+            try {
                 new URL(serviceUrl);
-            }
-            catch (MalformedURLException e)
-            {
+            } catch (MalformedURLException e) {
                 throw new InitialisationException(e, this);
             }
         }
 
-        if (errorFilter == null)
-        {
+        if (errorFilter == null) {
             // We'll set a default filter that checks the return code
             errorFilter = new ExpressionFilter("#[header:INBOUND:http.status!=200]");
             logger.info("Setting default error filter to ExpressionFilter('#[header:INBOUND:http.status!=200]')");
@@ -166,33 +149,28 @@ public class RestServiceWrapper extends AbstractComponent
     }
 
     @Override
-    public Object doInvoke(MuleEvent event) throws Exception
-    {
+    public Object doInvoke(MuleEvent event) throws Exception {
         Object requestBody;
 
         Object request = event.getMessage().getPayload();
         String tempUrl = serviceUrl;
         MuleMessage result;
-        if (muleContext.getExpressionManager().isExpression(serviceUrl))
-        {
+        if (muleContext.getExpressionManager().isExpression(serviceUrl)) {
             muleContext.getExpressionManager().validateExpression(serviceUrl);
             tempUrl = muleContext.getExpressionManager().parse(serviceUrl, event, true);
         }
 
         StringBuffer urlBuffer = new StringBuffer(tempUrl);
 
-        if (GET.equalsIgnoreCase(this.httpMethod) || DELETE.equalsIgnoreCase(this.httpMethod))
-        {
+        if (GET.equalsIgnoreCase(this.httpMethod) || DELETE.equalsIgnoreCase(this.httpMethod)) {
             requestBody = NullPayload.getInstance();
 
             setRESTParams(urlBuffer, event.getMessage(), request, requiredParams, false, null);
             setRESTParams(urlBuffer, event.getMessage(), request, optionalParams, true, null);
         }
         // if post
-        else
-        {
-            if (event.getMessage().getOutboundProperty(HttpConstants.HEADER_CONTENT_TYPE) == null)
-            {
+        else {
+            if (event.getMessage().getOutboundProperty(HttpConstants.HEADER_CONTENT_TYPE) == null) {
                 event.getMessage().setOutboundProperty(HttpConstants.HEADER_CONTENT_TYPE, CONTENT_TYPE_VALUE);
             }
 
@@ -208,41 +186,41 @@ public class RestServiceWrapper extends AbstractComponent
         event.getMessage().setOutboundProperty(HttpConnector.HTTP_METHOD_PROPERTY, httpMethod);
 
         EndpointBuilder endpointBuilder = new EndpointURIEndpointBuilder(tempUrl, muleContext);
+        if (connector != null) {
+            endpointBuilder.setConnector(connector);
+        }
+
         endpointBuilder.setExchangePattern(MessageExchangePattern.REQUEST_RESPONSE);
         OutboundEndpoint outboundEndpoint = endpointBuilder.buildOutboundEndpoint();
 
         MuleEventContext eventContext = new DefaultMuleEventContext(event);
         result = eventContext.sendEvent(
-            new DefaultMuleMessage(requestBody, event.getMessage(), muleContext), outboundEndpoint);
-        if (isErrorPayload(result))
-        {
-            handleException(new RestServiceException(CoreMessages.failedToInvokeRestService(tempUrl),
-                event), result);
+                new DefaultMuleMessage(requestBody, event.getMessage(), muleContext), outboundEndpoint);
+        event.getMessage().setProperty("http.status", result.getInboundProperty("http.status"), PropertyScope.INBOUND);
+
+        if (isErrorPayload(result)) {
+            event.setMessage(result);
+            throw new RestServiceException(CoreMessages.failedToInvokeRestService(tempUrl),
+                    event);
         }
 
         return result;
     }
 
-    private String getSeparator(String url)
-    {
+    private String getSeparator(String url) {
         String sep;
 
-        if (url.indexOf("?") > -1)
-        {
+        if (url.indexOf("?") > -1) {
             sep = "&";
-        }
-        else
-        {
+        } else {
             sep = "?";
         }
 
         return sep;
     }
 
-    private String updateSeparator(String sep)
-    {
-        if (sep.compareTo("?") == 0 || sep.compareTo("") == 0)
-        {
+    private String updateSeparator(String sep) {
+        if (sep.compareTo("?") == 0 || sep.compareTo("") == 0) {
             return ("&");
         }
 
@@ -258,61 +236,43 @@ public class RestServiceWrapper extends AbstractComponent
                                Object body,
                                Map args,
                                boolean optional,
-                               StringBuffer requestBodyBuffer)
-    {
+                               StringBuffer requestBodyBuffer) {
         String sep;
 
-        if (requestBodyBuffer == null)
-        {
+        if (requestBodyBuffer == null) {
             sep = getSeparator(url.toString());
-        }
-        else if(requestBodyBuffer.length() > 0)
-        {
+        } else if (requestBodyBuffer.length() > 0) {
             sep = "&";
-        }
-        else
-        {
+        } else {
             sep = StringUtils.EMPTY;
         }
 
-        for (Iterator iterator = args.entrySet().iterator(); iterator.hasNext();)
-        {
+        for (Iterator iterator = args.entrySet().iterator(); iterator.hasNext(); ) {
             Map.Entry entry = (Map.Entry) iterator.next();
             String name = (String) entry.getKey();
             String exp = (String) entry.getValue();
             Object value = null;
 
-            if (muleContext.getExpressionManager().isExpression(exp))
-            {
+            if (muleContext.getExpressionManager().isExpression(exp)) {
                 muleContext.getExpressionManager().validateExpression(exp);
-                try
-                {
+                try {
                     value = muleContext.getExpressionManager().evaluate(exp, msg);
-                }
-                catch (RequiredValueException e)
-                {
+                } catch (RequiredValueException e) {
                     //ignore
                 }
-            }
-            else
-            {
+            } else {
                 value = exp;
             }
 
-            if (value == null)
-            {
-                if (!optional)
-                {
+            if (value == null) {
+                if (!optional) {
                     throw new IllegalArgumentException(CoreMessages.propertyIsNotSetOnEvent(exp).toString());
                 }
-            }
-            else if (requestBodyBuffer != null) // implies this is a POST
+            } else if (requestBodyBuffer != null) // implies this is a POST
             {
                 requestBodyBuffer.append(sep);
                 requestBodyBuffer.append(name).append('=').append(value);
-            }
-            else
-            {
+            } else {
                 url.append(sep);
                 url.append(name).append('=').append(value);
             }
@@ -320,37 +280,25 @@ public class RestServiceWrapper extends AbstractComponent
             sep = updateSeparator(sep);
         }
 
-        if (!optional && payloadParameterNames != null)
-        {
-            if (body instanceof Object[])
-            {
+        if (!optional && payloadParameterNames != null) {
+            if (body instanceof Object[]) {
                 Object[] requestArray = (Object[]) body;
-                for (int i = 0; i < payloadParameterNames.size(); i++)
-                {
-                    if (requestBodyBuffer != null)
-                    {
+                for (int i = 0; i < payloadParameterNames.size(); i++) {
+                    if (requestBodyBuffer != null) {
                         requestBodyBuffer.append(sep).append(payloadParameterNames.get(i)).append('=').append(
                                 requestArray[i].toString());
-                    }
-                    else
-                    {
+                    } else {
                         url.append(sep).append(payloadParameterNames.get(i)).append('=').append(
                                 requestArray[i].toString());
                     }
 
                     sep = updateSeparator(sep);
                 }
-            }
-            else
-            {
-                if (payloadParameterNames.get(0) != null)
-                {
-                    if (requestBodyBuffer != null)
-                    {
+            } else {
+                if (payloadParameterNames.get(0) != null) {
+                    if (requestBodyBuffer != null) {
                         requestBodyBuffer.append(payloadParameterNames.get(0)).append('=').append(body.toString());
-                    }
-                    else
-                    {
+                    } else {
                         url.append(sep).append(payloadParameterNames.get(0)).append('=').append(body.toString());
                     }
                 }
@@ -358,14 +306,15 @@ public class RestServiceWrapper extends AbstractComponent
         }
     }
 
-    protected boolean isErrorPayload(MuleMessage message)
-    {
+    protected boolean isErrorPayload(MuleMessage message) {
         return errorFilter != null && errorFilter.accept(message);
     }
 
-    protected void handleException(RestServiceException e, MuleMessage result) throws Exception
-    {
-        throw e;
+    public HttpsConnector getConnector() {
+        return connector;
     }
 
+    public void setConnector(HttpsConnector connector) {
+        this.connector = connector;
+    }
 }
