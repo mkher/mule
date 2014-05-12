@@ -7,6 +7,7 @@
         <version>3.4.0</version>
     </parent>
     <artifactId>mule-transport-http</artifactId>
+    <version>3.5.0-MI-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>HTTP Transport</name>
     <description>
