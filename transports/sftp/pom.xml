@@ -8,6 +8,7 @@
         <version>3.4.0</version>
     </parent>
     <artifactId>mule-transport-sftp</artifactId>
+    <version>3.5.0-MI-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>SFTP Transport</name>
     <description>A Mule transport for SFTP connectivity</description>

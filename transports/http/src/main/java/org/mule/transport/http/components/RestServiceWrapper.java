@@ -186,7 +186,7 @@ public class RestServiceWrapper extends AbstractComponent {
         event.getMessage().setOutboundProperty(HttpConnector.HTTP_METHOD_PROPERTY, httpMethod);
 
         EndpointBuilder endpointBuilder = new EndpointURIEndpointBuilder(tempUrl, muleContext);
-        if (connector != null) {
+        if (StringUtils.startsWith(tempUrl, HttpsConnector.HTTPS) && connector != null) {
             endpointBuilder.setConnector(connector);
         }
 
