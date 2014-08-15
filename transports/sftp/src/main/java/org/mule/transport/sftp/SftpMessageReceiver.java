@@ -98,6 +98,8 @@ public class SftpMessageReceiver extends AbstractPollingMessageReceiver
                         }
                         catch (Exception e)
                         {
+                            logger.error("Could not get a lock on file:" + file);
+                        } finally {
                             fileLock.unlock();
                         }
                     }
@@ -180,7 +182,7 @@ public class SftpMessageReceiver extends AbstractPollingMessageReceiver
     /**
      * SFTP-35
      */
-    @Override 
+    @Override
     protected MuleMessage handleUnacceptedFilter(MuleMessage message) {
         logger.debug("the filter said no, now trying to close the payload stream");
         try {
